@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="정책실">
+<meta name="theme-color" content="#2F4A2A">
+<title>말씀함께 정책실</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root {
+  --bg: #EDF0EA;
+  --surface: #FFFFFF;
+  --ink: #1B231C;
+  --ink-soft: #5A665C;
+  --line: #D5DCD2;
+  --vine: #2F4A2A;          /* 머리줄, Choi 말풍선 */
+  --vine-ink: #F3F6F1;
+  --kang: #2C4766;          /* Kang 말풍선 */
+  --kang-ink: #F1F5F9;
+  --agent-rule: #7C9A5E;    /* 에이전트 메모 왼쪽 줄 */
+  --decide: #9A5B0C;        /* 결정 요청 */
+  --decide-bg: #FBF3E6;
+  --ok: #3F7A3A;
+  --danger: #A2352B;
+  --chip: #E2E8DE;
+  --radius-bubble: 18px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121612;
+    --surface: #1C221C;
+    --ink: #E5EBE3;
+    --ink-soft: #9AA79B;
+    --line: #2E372E;
+    --vine: #4E7444;
+    --vine-ink: #F3F6F1;
+    --kang: #3D6189;
+    --kang-ink: #F1F5F9;
+    --agent-rule: #8DB06B;
+    --decide: #E3A24A;
+    --decide-bg: #2A2215;
+    --ok: #7DBA74;
+    --danger: #E07A6F;
+    --chip: #263026;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--agent-rule); outline-offset: 2px; }
+
+.app { display: flex; flex-direction: column; height: 100dvh; max-width: 720px; margin: 0 auto; }
+
+/* 머리줄 */
+header {
+  background: var(--vine);
+  color: var(--vine-ink);
+  padding: calc(env(safe-area-inset-top) + 10px) 16px 0;
+}
+.head-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+.status { font-size: 14px; opacity: .85; display: flex; align-items: center; gap: 6px; }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: #B9C9B0; }
+.status.working .dot { background: #F2C14E; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .status.working .dot { animation: none; } }
+.icon-btn { background: none; border: 0; color: inherit; padding: 6px; border-radius: 8px; font-size: 15px; opacity: .9; }
+
+nav.tabs { display: flex; gap: 4px; margin-top: 10px; }
+nav.tabs button {
+  flex: 1; background: none; border: 0; color: var(--vine-ink); opacity: .7;
+  padding: 10px 0 12px; font-weight: 600; border-bottom: 3px solid transparent;
+}
+nav.tabs button[aria-selected="true"] { opacity: 1; border-bottom-color: #E9F0E4; }
+nav.tabs .badge {
+  display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 4px;
+  border-radius: 10px; background: #F2C14E; color: #2A1F05; font-size: 13px; line-height: 20px;
+}
+
+main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.pane { padding: 12px 14px 20px; }
+.pane[hidden] { display: none; }
+
+/* 대화 */
+.day { text-align: center; margin: 18px 0 10px; font-size: 13px; color: var(--ink-soft); }
+.msg { display: flex; flex-direction: column; margin: 6px 0; max-width: 88%; }
+.msg .who { font-size: 13px; color: var(--ink-soft); margin: 0 6px 3px; }
+.msg .bubble { padding: 10px 14px; border-radius: var(--radius-bubble); white-space: normal; }
+.msg .time { font-size: 12px; color: var(--ink-soft); margin: 3px 8px 0; }
+.msg.me { margin-left: auto; align-items: flex-end; }
+.msg.me .bubble { border-bottom-right-radius: 6px; }
+.msg.other .bubble { border-bottom-left-radius: 6px; }
+.msg.choi .bubble { background: var(--vine); color: var(--vine-ink); }
+.msg.kang .bubble { background: var(--kang); color: var(--kang-ink); }
+.msg.unknown .bubble { background: var(--chip); }
+.msg.agent { max-width: 94%; }
+.msg.agent .bubble {
+  background: var(--surface); border: 1px solid var(--line);
+  border-left: 4px solid var(--agent-rule); border-radius: 10px;
+}
+.msg.bot { max-width: 100%; align-items: center; margin: 4px auto; }
+.msg.bot .bubble { background: none; padding: 2px 8px; font-size: 14px; color: var(--ink-soft); text-align: center; }
+.msg.bot .who, .msg.bot .time { display: none; }
+.bubble p { margin: 0 0 6px; } .bubble p:last-child { margin-bottom: 0; }
+.bubble ul { margin: 4px 0; padding-left: 20px; }
+.bubble code { font-family: ui-monospace, Menlo, monospace; font-size: .88em; background: var(--chip); padding: 1px 5px; border-radius: 5px; color: var(--ink); }
+.bubble pre { background: var(--chip); color: var(--ink); padding: 8px 10px; border-radius: 8px; overflow-x: auto; font-size: 14px; margin: 6px 0; }
+.bubble a { color: inherit; }
+.bubble strong { font-weight: 700; }
+
+/* 결정 요청 카드 (대화 안) */
+.decision {
+  background: var(--decide-bg); border: 1px solid var(--decide); border-radius: 12px;
+  padding: 12px 14px; margin-top: 8px; color: var(--ink);
+}
+.decision h3 { margin: 0 0 4px; font-size: 16px; color: var(--decide); }
+.decision .opts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.decision .opts button {
+  border: 1px solid var(--decide); background: var(--surface); color: var(--ink);
+  border-radius: 10px; padding: 8px 14px; font-weight: 600; min-height: 44px;
+}
+.decision .votes { margin-top: 10px; font-size: 14px; color: var(--ink-soft); display: flex; gap: 14px; flex-wrap: wrap; }
+.decision .votes b { color: var(--ok); }
+
+/* 입력창 */
+.composer {
+  display: flex; gap: 8px; align-items: flex-end;
+  padding: 10px 12px calc(env(safe-area-inset-bottom) + 10px);
+  background: var(--surface); border-top: 1px solid var(--line);
+}
+.composer textarea {
+  flex: 1; resize: none; border: 1px solid var(--line); border-radius: 20px;
+  padding: 10px 14px; background: var(--bg); max-height: 160px; min-height: 44px;
+}
+.composer button {
+  border: 0; background: var(--vine); color: var(--vine-ink);
+  border-radius: 20px; padding: 0 18px; min-height: 44px; font-weight: 700;
+}
+.composer button:disabled { opacity: .5; }
+.composer[hidden] { display: none; }
+
+/* 회의록 */
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+select, .toolbar input {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 8px 10px; min-height: 44px;
+}
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips button {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 16px; padding: 4px 12px; font-size: 14px; min-height: 36px;
+}
+.chips button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.log-row { display: grid; grid-template-columns: 52px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.log-row .t { font-size: 14px; color: var(--ink-soft); padding-top: 2px; }
+.log-row .route { font-size: 14px; font-weight: 600; }
+.log-row .kind { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 10px; background: var(--chip); margin-left: 6px; font-weight: 600; }
+.log-row .kind.k-충돌, .log-row .kind.k-이견 { background: #F6DCD8; color: #7A2219; }
+.log-row .kind.k-결정요청 { background: var(--decide-bg); color: var(--decide); }
+.log-row .kind.k-완료, .log-row .kind.k-결정 { background: #DCEBD8; color: #24521F; }
+@media (prefers-color-scheme: dark) {
+  .log-row .kind.k-충돌, .log-row .kind.k-이견 { background: #3A1F1B; color: #F0A59B; }
+  .log-row .kind.k-완료, .log-row .kind.k-결정 { background: #1F3320; color: #A6D79E; }
+}
+.log-row .body { margin-top: 2px; }
+
+/* 결정 탭 */
+.dcard { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+.dcard.waiting { border-color: var(--decide); }
+.dcard .state { font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.dcard.waiting .state { color: var(--decide); }
+.dcard h3 { margin: 4px 0 8px; font-size: 17px; }
+.dcard details { margin-top: 8px; }
+.dcard summary { cursor: pointer; color: var(--ink-soft); font-size: 14px; }
+.dcard pre { white-space: pre-wrap; font-family: inherit; font-size: 15px; margin: 8px 0 0; }
+
+.empty { text-align: center; color: var(--ink-soft); padding: 40px 16px; }
+.error { background: #F6DCD8; color: #7A2219; border-radius: 10px; padding: 10px 12px; margin: 10px 0; font-size: 15px; }
+@media (prefers-color-scheme: dark) { .error { background: #3A1F1B; color: #F0A59B; } }
+
+/* 설정 */
+.setup { padding: 20px 18px 40px; }
+.setup h2 { font-size: 22px; margin: 6px 0 4px; }
+.setup p.lead { color: var(--ink-soft); margin: 0 0 20px; }
+.field { margin-bottom: 18px; }
+.field label { display: block; font-weight: 600; margin-bottom: 6px; }
+.field .hint { font-size: 14px; color: var(--ink-soft); margin-top: 4px; }
+.field input[type="text"], .field input[type="password"], .field input[type="number"] {
+  width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 12px; min-height: 48px;
+}
+.who-pick { display: flex; gap: 10px; }
+.who-pick label {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 2px solid var(--line); border-radius: 12px; padding: 14px; font-weight: 700; background: var(--surface);
+}
+.who-pick input { accent-color: var(--vine); width: 20px; height: 20px; }
+.who-pick label:has(input:checked) { border-color: var(--vine); }
+.primary { width: 100%; border: 0; background: var(--vine); color: var(--vine-ink); border-radius: 12px; padding: 14px; font-weight: 700; min-height: 52px; }
+.link-btn { background: none; border: 0; color: var(--danger); padding: 12px 0; text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="head-row">
+      <div>
+        <div class="title">말씀함께 정책실</div>
+        <div class="status" id="status" aria-live="polite"><span class="dot"></span><span id="status-text">연결 전</span></div>
+      </div>
+      <button class="icon-btn" id="open-setup" aria-label="설정">설정</button>
+    </div>
+    <nav class="tabs" role="tablist" id="tabs">
+      <button role="tab" aria-selected="true" data-tab="chat">대화</button>
+      <button role="tab" aria-selected="false" data-tab="log">회의록</button>
+      <button role="tab" aria-selected="false" data-tab="decide">결정<span class="badge" id="decide-badge" hidden></span></button>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="pane" id="pane-chat"><div id="chat"></div></section>
+
+    <section class="pane" id="pane-log" hidden>
+      <div class="toolbar">
+        <select id="log-date" aria-label="회의록 날짜"></select>
+        <div class="chips" id="log-filter">
+          <button aria-pressed="true" data-k="">전체</button>
+          <button aria-pressed="false" data-k="충돌|이견">충돌·이견</button>
+          <button aria-pressed="false" data-k="결정요청|결정">결정</button>
+          <button aria-pressed="false" data-k="질문|답변">질문·답변</button>
+        </div>
+      </div>
+      <div id="log"></div>
+    </section>
+
+    <section class="pane" id="pane-decide" hidden><div id="decide"></div></section>
+
+    <section class="setup" id="pane-setup" hidden>
+      <h2>정책실 연결</h2>
+      <p class="lead">처음 한 번만 설정하면 됩니다. 이 정보는 이 휴대폰에만 저장됩니다.</p>
+      <form id="setup-form">
+        <div class="field">
+          <label>나는</label>
+          <div class="who-pick">
+            <label><input type="radio" name="who" value="Choi" required> Choi</label>
+            <label><input type="radio" name="who" value="Kang"> Kang</label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-repo">정책 저장소</label>
+          <input type="text" id="f-repo" placeholder="davidsjchoi/Policy" autocapitalize="off" autocomplete="off" spellcheck="false" required>
+        </div>
+        <div class="field">
+          <label for="f-issue">채팅방 이슈 번호</label>
+          <input type="number" id="f-issue" inputmode="numeric" min="1" value="1" required>
+        </div>
+        <div class="field">
+          <label for="f-token">접속키</label>
+          <input type="password" id="f-token" placeholder="github_pat_로 시작하는 키" autocapitalize="off" autocomplete="off" spellcheck="false" required>
+          <div class="hint">Choi가 만들어 준 키를 붙여 넣으세요. 휴대폰을 잃어버리면 Choi에게 알려 키를 폐기하세요.</div>
+        </div>
+        <button class="primary" type="submit">연결하기</button>
+      </form>
+      <button class="link-btn" id="forget" type="button">이 휴대폰에서 연결 정보 지우기</button>
+    </section>
+  </main>
+
+  <form class="composer" id="composer">
+    <textarea id="input" rows="1" placeholder="팀장에게 지시하기" aria-label="메시지"></textarea>
+    <button type="submit" id="send">보내기</button>
+  </form>
+</div>
+
+<script>
+/* ---------- 순수 함수: 파싱과 표시 ---------- */
+const AGENT_RE = /<!-- malsseum-agent:([^ >]+) -->\n?/;
+const FROM_RE = /<!-- malsseum-from:([^ >]+) -->\n?/;
+const PEOPLE = ["Choi", "Kang"];
+
+function classify(c) {
+  const body = c.body || "";
+  let m = body.match(AGENT_RE);
+  if (m) return { kind: m[1] === "팀장" ? "agent" : "bot", name: m[1], text: body.replace(AGENT_RE, "") };
+  m = body.match(FROM_RE);
+  if (m) return { kind: "human", name: m[1], text: body.replace(FROM_RE, "") };
+  return { kind: "human", name: "@" + (c.user && c.user.login || "알 수 없음"), text: body };
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+}
+
+function inline(s) {
+  // s 는 이미 이스케이프된 문자열
+  return s
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+}
+
+function md(text) {
+  const out = [];
+  const parts = String(text).split(/```[a-z]*\n?/);
+  parts.forEach((part, i) => {
+    if (i % 2 === 1) { out.push("<pre>" + esc(part.replace(/\n$/, "")) + "</pre>"); return; }
+    const lines = part.split("\n");
+    let list = null, para = [];
+    const flush = () => {
+      if (para.length) { out.push("<p>" + para.map(l => inline(esc(l))).join("<br>") + "</p>"); para = []; }
+      if (list) { out.push("<ul>" + list.map(l => "<li>" + inline(esc(l)) + "</li>").join("") + "</ul>"); list = null; }
+    };
+    for (const raw of lines) {
+      const line = raw.replace(/\s+$/, "");
+      const li = line.match(/^\s*[-*]\s+(.*)$/);
+      const h = line.match(/^#{1,6}\s+(.*)$/);
+      if (!line.trim()) { flush(); continue; }
+      if (li) { if (para.length) { const p = para; para = []; out.push("<p>" + p.map(l => inline(esc(l))).join("<br>") + "</p>"); } (list = list || []).push(li[1]); continue; }
+      if (list) { out.push("<ul>" + list.map(l => "<li>" + inline(esc(l)) + "</li>").join("") + "</ul>"); list = null; }
+      if (h) { flush(); out.push("<p><strong>" + inline(esc(h[1])) + "</strong></p>"); continue; }
+      para.push(line);
+    }
+    flush();
+  });
+  return out.join("");
+}
+
+// 대화 속 결정 요청: "결정 요청 D-001: 쟁점" + "A. ..." "B. ..."
+function parseDecisionRequest(text) {
+  const head = text.match(/결정\s*요청\s*(D-\d+)\s*[:：]?\s*(.*)/);
+  if (!head) return null;
+  const options = [];
+  for (const line of text.split("\n")) {
+    const m = line.match(/^\s*([A-Z])[.)]\s*(.+)$/);
+    if (m) options.push({ key: m[1], label: m[2] });
+  }
+  return { id: head[1], title: head[2].trim(), options };
+}
+
+// 사람 글 속 승인: "D-001 A 승인"
+function parseApproval(text) {
+  const m = text.match(/(D-\d+)\s*([A-Z])\s*안?\s*승인/);
+  return m ? { id: m[1], key: m[2] } : null;
+}
+
+function tallyApprovals(items) {
+  const votes = {}; // id -> {Choi: "A", Kang: "B"}
+  for (const it of items) {
+    if (it.kind !== "human" || !PEOPLE.includes(it.name)) continue;
+    const a = parseApproval(it.text);
+    if (a) { (votes[a.id] = votes[a.id] || {})[it.name] = a.key; }
+  }
+  return votes;
+}
+
+// 회의록 표 한 줄: | 10:15 | 법무 | 보안 | 질문 | 내용 |
+function parseLog(mdText) {
+  const rows = [];
+  for (const line of mdText.split("\n")) {
+    const m = line.match(/^\|\s*(\d{2}:\d{2})\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*(.*?)\s*\|\s*$/);
+    if (m) rows.push({ time: m[1], from: m[2], to: m[3], kind: m[4], body: m[5] });
+  }
+  return rows;
+}
+
+// 결정 문서
+function parseDecisionDoc(name, mdText) {
+  const title = (mdText.match(/^#\s+(.+)$/m) || [, name])[1];
+  const state = (mdText.match(/^\|\s*상태\s*\|\s*([^|]+?)\s*\|/m) || [, "알 수 없음"])[1];
+  const id = (name.match(/^(D-\d+)/) || title.match(/(D-\d+)/) || [, ""])[1];
+  const options = [];
+  const re = /^###\s*([A-Z])[.)]\s*(.+)$/gm;
+  let m;
+  while ((m = re.exec(mdText))) options.push({ key: m[1], label: m[2].trim() });
+  return { id, title, state, options, waiting: /대기/.test(state) };
+}
+
+const kst = iso => new Date(iso).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" });
+const kstDay = iso => new Date(iso).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", weekday: "short" });
+
+/* ---------- 저장 (이 휴대폰에만) ---------- */
+const store = {
+  get() { try { return JSON.parse(localStorage.getItem("malsseum-chat") || "null"); } catch (e) { return null; } },
+  set(v) { try { localStorage.setItem("malsseum-chat", JSON.stringify(v)); return true; } catch (e) { return false; } },
+  clear() { try { localStorage.removeItem("malsseum-chat"); } catch (e) {} }
+};
+
+/* ---------- GitHub ---------- */
+let cfg = store.get() || window.__memCfg || null;
+
+async function gh(path, opts = {}) {
+  const res = await fetch("https://api.github.com/" + path, {
+    ...opts,
+    headers: {
+      "Authorization": "Bearer " + cfg.token,
+      "Accept": opts.raw ? "application/vnd.github.raw+json" : "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(opts.body ? { "Content-Type": "application/json" } : {})
+    }
+  });
+  if (!res.ok) {
+    const err = new Error(String(res.status));
+    err.status = res.status;
+    throw err;
+  }
+  return opts.raw ? res.text() : res.json();
+}
+
+function explain(err) {
+  if (err.status === 401) return "접속키가 맞지 않거나 만료되었습니다. 설정에서 키를 다시 넣어 주세요.";
+  if (err.status === 403) return "접속키에 이 기능 권한이 없습니다. Choi에게 키 권한(Issues 쓰기, Contents 읽기)을 확인해 달라고 하세요.";
+  if (err.status === 404) return "저장소나 이슈 번호를 찾을 수 없습니다. 설정의 저장소 이름과 이슈 번호를 확인해 주세요.";
+  return "GitHub에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 열어 주세요.";
+}
+
+/* ---------- 화면 ---------- */
+const $ = id => document.getElementById(id);
+let comments = [];            // 원본 댓글
+let current = "chat";
+
+function showTab(tab) {
+  current = tab;
+  for (const b of $("tabs").querySelectorAll("button")) b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+  for (const t of ["chat", "log", "decide", "setup"]) $("pane-" + t).hidden = t !== tab;
+  $("composer").hidden = tab !== "chat";
+  if (tab === "log") loadLog();
+  if (tab === "decide") loadDecisions();
+  if (tab === "chat") scrollBottom();
+}
+$("tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) showTab(b.dataset.tab); });
+
+function scrollBottom() { const m = $("main"); m.scrollTop = m.scrollHeight; }
+
+function renderChat() {
+  const items = comments.map(c => ({ ...classify(c), id: c.id, at: c.created_at }));
+  const votes = tallyApprovals(items);
+  const box = $("chat");
+  if (!items.length) { box.innerHTML = '<div class="empty">아직 대화가 없습니다.<br>아래 입력창에 첫 지시를 남겨 보세요.</div>'; return; }
+  let html = "", lastDay = "";
+  for (const it of items) {
+    const day = kstDay(it.at);
+    if (day !== lastDay) { html += `<div class="day">${esc(day)}</div>`; lastDay = day; }
+    const mine = it.kind === "human" && it.name === cfg.who;
+    const cls = it.kind === "agent" ? "agent other" : it.kind === "bot" ? "bot" :
+      (mine ? "me " : "other ") + (it.name === "Choi" ? "choi" : it.name === "Kang" ? "kang" : "unknown");
+    let extra = "";
+    if (it.kind === "agent") {
+      const d = parseDecisionRequest(it.text);
+      if (d && d.options.length) extra = decisionCard(d, votes[d.id] || {});
+    }
+    html += `<div class="msg ${cls}">
+      <div class="who">${esc(mine ? "" : it.name)}</div>
+      <div class="bubble">${md(it.text)}${extra}</div>
+      <div class="time">${kst(it.at)}</div></div>`;
+  }
+  const atBottom = $("main").scrollHeight - $("main").scrollTop - $("main").clientHeight < 80;
+  box.innerHTML = html;
+  if (atBottom) scrollBottom();
+}
+
+function decisionCard(d, v) {
+  const opts = d.options.map(o =>
+    `<button type="button" data-approve="${esc(d.id)} ${esc(o.key)}">${esc(o.key)} 승인</button>`).join("");
+  const vote = p => v[p] ? `<span>${p}: <b>${esc(v[p])} 승인</b></span>` : `<span>${p}: 아직</span>`;
+  return `<div class="decision"><h3>${esc(d.id)} 결정 요청</h3>
+    <div class="opts">${opts}</div><div class="votes">${vote("Choi")}${vote("Kang")}</div></div>`;
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-approve]");
+  if (!b) return;
+  const input = $("input");
+  input.value = b.dataset.approve + " 승인";
+  if (current !== "chat") showTab("chat");
+  input.focus();
+  autoGrow();
+});
+
+/* 대화 불러오기 */
+async function loadChat(full) {
+  try {
+    if (full) {
+      const issue = await gh(`repos/${cfg.repo}/issues/${cfg.issue}`);
+      const n = issue.comments, pages = Math.max(1, Math.ceil(n / 100));
+      const want = pages > 1 ? [pages - 1, pages] : [1];
+      const lists = await Promise.all(want.map(p => gh(`repos/${cfg.repo}/issues/${cfg.issue}/comments?per_page=100&page=${p}`)));
+      comments = lists.flat();
+    } else {
+      const since = comments.length ? comments[comments.length - 1].created_at : "1970-01-01T00:00:00Z";
+      const fresh = await gh(`repos/${cfg.repo}/issues/${cfg.issue}/comments?per_page=100&since=${encodeURIComponent(since)}`);
+      const seen = new Set(comments.map(c => c.id));
+      for (const c of fresh) if (!seen.has(c.id)) comments.push(c);
+    }
+    $("chat").querySelector(".error")?.remove();
+    renderChat();
+    if (full) scrollBottom();
+  } catch (err) {
+    $("chat").innerHTML = `<div class="error">${esc(explain(err))}</div>`;
+  }
+}
+
+/* 팀장 상태 */
+async function loadStatus() {
+  const st = $("status"), tx = $("status-text");
+  try {
+    const r = await gh(`repos/${cfg.repo}/actions/runs?per_page=5`);
+    const run = (r.workflow_runs || []).find(w => w.name === "정책실 팀장");
+    const busy = run && (run.status === "in_progress" || run.status === "queued" || run.status === "waiting");
+    st.classList.toggle("working", !!busy);
+    tx.textContent = busy ? "팀장 작업 중" : "대기 중";
+  } catch (err) {
+    st.classList.remove("working");
+    tx.textContent = cfg.who + "로 연결됨";
+  }
+}
+
+/* 보내기 */
+const input = $("input");
+function autoGrow() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 160) + "px"; }
+input.addEventListener("input", autoGrow);
+$("composer").addEventListener("submit", async e => {
+  e.preventDefault();
+  const text = input.value.trim();
+  if (!text) return;
+  $("send").disabled = true;
+  try {
+    const c = await gh(`repos/${cfg.repo}/issues/${cfg.issue}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ body: `<!-- malsseum-from:${cfg.who} -->\n${text}` })
+    });
+    comments.push(c);
+    input.value = ""; autoGrow();
+    renderChat(); scrollBottom();
+    setTimeout(loadStatus, 4000);
+  } catch (err) {
+    alert(explain(err));
+  } finally {
+    $("send").disabled = false;
+  }
+});
+
+/* 회의록 */
+let logFiles = null, logFilter = "";
+async function loadLog() {
+  const box = $("log"), sel = $("log-date");
+  try {
+    if (!logFiles) {
+      const list = await gh(`repos/${cfg.repo}/contents/discussions`);
+      logFiles = list.filter(f => /^\d{4}-\d{2}-\d{2}\.md$/.test(f.name)).map(f => f.name).sort().reverse();
+      sel.innerHTML = logFiles.map(n => `<option>${esc(n.replace(".md", ""))}</option>`).join("");
+    }
+    if (!logFiles.length) { box.innerHTML = '<div class="empty">아직 회의록이 없습니다.<br>팀장이 일을 시작하면 이곳에 에이전트끼리 나눈 대화가 쌓입니다.</div>'; return; }
+    const text = await gh(`repos/${cfg.repo}/contents/discussions/${sel.value}.md`, { raw: true });
+    let rows = parseLog(text);
+    if (logFilter) { const ks = logFilter.split("|"); rows = rows.filter(r => ks.includes(r.kind)); }
+    box.innerHTML = rows.length ? rows.slice().reverse().map(r => `
+      <div class="log-row"><div class="t">${esc(r.time)}</div>
+        <div><div class="route">${esc(r.from)} → ${esc(r.to)}<span class="kind k-${esc(r.kind)}">${esc(r.kind)}</span></div>
+        <div class="body">${inline(esc(r.body))}</div></div></div>`).join("")
+      : '<div class="empty">이 조건에 맞는 기록이 없습니다.</div>';
+  } catch (err) {
+    if (err.status === 404) { box.innerHTML = '<div class="empty">아직 회의록이 없습니다.<br>팀장이 일을 시작하면 이곳에 에이전트끼리 나눈 대화가 쌓입니다.</div>'; return; }
+    box.innerHTML = `<div class="error">${esc(explain(err))}</div>`;
+  }
+}
+$("log-date").addEventListener("change", loadLog);
+$("log-filter").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  for (const x of $("log-filter").querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b));
+  logFilter = b.dataset.k; loadLog();
+});
+
+/* 결정 */
+async function loadDecisions() {
+  const box = $("decide");
+  try {
+    const list = (await gh(`repos/${cfg.repo}/contents/decisions`)).filter(f => /^D-\d+.*\.md$/.test(f.name));
+    if (!list.length) { box.innerHTML = '<div class="empty">결정할 일이 아직 없습니다.<br>팀장이 결정 요청을 올리면 이곳에 모입니다.</div>'; updateBadge(0); return; }
+    const docs = await Promise.all(list.map(async f => {
+      const t = await gh(`repos/${cfg.repo}/contents/decisions/${encodeURIComponent(f.name)}`, { raw: true });
+      return { ...parseDecisionDoc(f.name, t), raw: t, file: f.name };
+    }));
+    docs.sort((a, b) => (b.waiting - a.waiting) || b.file.localeCompare(a.file));
+    const votes = tallyApprovals(comments.map(c => classify(c)));
+    updateBadge(docs.filter(d => d.waiting).length);
+    box.innerHTML = docs.map(d => {
+      const v = votes[d.id] || {};
+      const btns = d.waiting && d.options.length ? `<div class="decision" style="margin-top:6px">
+          <div class="opts">${d.options.map(o => `<button type="button" data-approve="${esc(d.id)} ${esc(o.key)}">${esc(o.key)}. ${esc(o.label)}</button>`).join("")}</div>
+          <div class="votes">${["Choi", "Kang"].map(p => v[p] ? `<span>${p}: <b>${esc(v[p])} 승인</b></span>` : `<span>${p}: 아직</span>`).join("")}</div></div>` : "";
+      return `<article class="dcard ${d.waiting ? "waiting" : ""}">
+        <div class="state">${esc(d.state)}</div><h3>${esc(d.title)}</h3>${btns}
+        <details><summary>전체 내용 보기</summary><pre>${esc(d.raw)}</pre></details></article>`;
+    }).join("");
+  } catch (err) {
+    if (err.status === 404) { box.innerHTML = '<div class="empty">결정할 일이 아직 없습니다.<br>팀장이 결정 요청을 올리면 이곳에 모입니다.</div>'; updateBadge(0); return; }
+    box.innerHTML = `<div class="error">${esc(explain(err))}</div>`;
+  }
+}
+function updateBadge(n) { const b = $("decide-badge"); b.hidden = !n; b.textContent = n; }
+
+/* 설정 */
+function openSetup() {
+  for (const t of ["chat", "log", "decide"]) $("pane-" + t).hidden = true;
+  $("pane-setup").hidden = false; $("composer").hidden = true;
+  if (cfg) {
+    $("f-repo").value = cfg.repo; $("f-issue").value = cfg.issue; $("f-token").value = cfg.token;
+    const r = document.querySelector(`input[name=who][value="${cfg.who}"]`); if (r) r.checked = true;
+  }
+}
+$("open-setup").addEventListener("click", openSetup);
+$("setup-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const next = {
+    who: document.querySelector("input[name=who]:checked").value,
+    repo: $("f-repo").value.trim().replace(/^https?:\/\/github\.com\//, "").replace(/\/$/, ""),
+    issue: parseInt($("f-issue").value, 10),
+    token: $("f-token").value.trim()
+  };
+  const prev = cfg; cfg = next;
+  try {
+    await gh(`repos/${cfg.repo}/issues/${cfg.issue}`);
+  } catch (err) {
+    cfg = prev; alert(explain(err)); return;
+  }
+  if (!store.set(cfg)) window.__memCfg = cfg; // 저장이 막힌 브라우저에서는 이번 사용 동안만 기억
+  logFiles = null;
+  start();
+});
+$("forget").addEventListener("click", () => {
+  if (!confirm("이 휴대폰에서 접속키와 설정을 지울까요?")) return;
+  store.clear(); cfg = null; comments = [];
+  $("f-token").value = "";
+  openSetup();
+});
+
+/* 시작 */
+let timer = null;
+function start() {
+  showTab("chat");
+  loadChat(true); loadStatus(); loadDecisions();
+  clearInterval(timer);
+  timer = setInterval(() => {
+    if (document.hidden || !cfg) return;
+    if (current === "chat") loadChat(false);
+    loadStatus();
+  }, 15000);
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && cfg) { loadChat(false); loadStatus(); } });
+
+if (cfg) start(); else openSetup();
+</script>
+</body>
+</html>
